@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coordinator - Respuesta de servicio</title>
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  background: #101d35;
+  color: white;
+}
+
+main {
+  width: 100%;
+  max-width: 420px;
+  padding: 30px 24px;
+  background: #1c2d49;
+  border: 1px solid #344967;
+  border-radius: 18px;
+  text-align: center;
+}
+
+h2 { color: #ffd447; font-size: 28px; }
+h3 { font-size: 21px; }
+p { color: #d8e1ef; line-height: 1.5; }
+
+button {
+  width: 100%;
+  padding: 17px;
+  margin-top: 15px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled { opacity: .55; }
+.yes { background: #28a568; color: white; }
+.no { background: #d94b4b; color: white; }
+
+#message {
+  margin-top: 22px;
+  line-height: 1.5;
+}
+</style>
+</head>
+
+<body>
+<main>
+  <h2>COORDINATOR</h2>
+  <h3>Respuesta al servicio</h3>
+  <p>Seleccioná una opción para responder al coordinador.</p>
+
+  <button class="yes" onclick="answer('confirmed')">
+    CONFIRMAR SERVICIO
+  </button>
+
+  <button class="no" onclick="answer('rejected')">
+    RECHAZAR SERVICIO
+  </button>
+
+  <div id="message" role="status"></div>
+</main>
+
+<script>
+const SUPABASE_URL =
+  "https://jcejdbwaanrxfkzzfsij.supabase.co";
+
+const PUBLIC_KEY =
+  "sb_publishable_C7yPJRxOPTvLtjMIcJdQ3A_CrOhNw4-";
+
+const token =
+  new URLSearchParams(window.location.search).get("token");
+
+let submitted = false;
+
+async function answer(response) {
+  const message = document.getElementById("message");
+  const buttons = document.querySelectorAll("button");
+
+  if (submitted) return;
+
+  if (!token) {
+    message.textContent = "El enlace no contiene un código válido.";
+    return;
+  }
+
+  buttons.forEach(button => button.disabled = true);
+  message.textContent = "Registrando respuesta...";
+
+  try {
+    const result = await fetch(
+      SUPABASE_URL + "/functions/v1/driver-response",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": PUBLIC_KEY
+        },
+        body: JSON.stringify({
+          token: token,
+          response: response
+        })
+      }
+    );
+
+    const data = await result.json();
+
+    if (result.ok && data.result === "success") {
+      submitted = true;
+      message.textContent =
+        "¡Respuesta registrada correctamente!";
+    } else {
+      message.textContent =
+        data.message ||
+        data.error ||
+        "El enlace venció o ya fue utilizado.";
+
+      buttons.forEach(button => button.disabled = false);
+    }
+  } catch (error) {
+    message.textContent =
+      "No se pudo conectar. Intentá nuevamente.";
+
+    buttons.forEach(button => button.disabled = false);
+  }
+}
+</script>
+</body>
+</html>
